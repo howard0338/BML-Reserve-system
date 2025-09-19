@@ -25,8 +25,18 @@ class InstrumentBookingSystem {
         console.log('🔄 等待Firebase準備...');
         this.updateConnectionStatus('connecting', '連線中...');
         
+        // 設定超時機制，10秒後強制顯示系統
+        const timeoutId = setTimeout(() => {
+            console.log('⏰ Firebase連接超時，使用本地模式');
+            this.isFirebaseReady = false;
+            this.updateConnectionStatus('offline', '離線模式');
+            this.loadDataFromLocalStorage();
+            this.showMessage('Firebase連接超時，使用離線模式', 'warning');
+        }, 10000);
+        
         // 監聽Firebase準備事件
         window.addEventListener('firebaseReady', () => {
+            clearTimeout(timeoutId);
             console.log('✅ Firebase已準備就緒');
             this.isFirebaseReady = true;
             this.updateConnectionStatus('connected', '已連線');

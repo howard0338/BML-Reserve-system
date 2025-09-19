@@ -32,15 +32,6 @@
             try {
                 console.log('🚀 開始初始化Firebase...');
                 
-                // 測試資料庫連接
-                console.log('🔗 測試Realtime Database連接...');
-                const testRef = ref(db, 'test');
-                await set(testRef, { 
-                    message: 'Firebase Realtime Database 連接測試',
-                    timestamp: new Date().toISOString()
-                });
-                console.log('✅ Realtime Database連接成功');
-                
                 // 將Firebase功能設為全域變數
                 window.firebase = {
                     database: db,
@@ -77,6 +68,7 @@
                             window.dispatchEvent(new CustomEvent('firebaseReady'));
                         }).catch((error) => {
                             console.error('❌ 匿名認證失敗:', error);
+                            // 即使認證失敗也觸發ready事件，讓系統繼續運行
                             window.dispatchEvent(new CustomEvent('firebaseReady'));
                         });
                     }
@@ -85,6 +77,7 @@
             } catch (error) {
                 console.error('❌ Firebase初始化失敗:', error);
                 console.error('錯誤詳情:', error);
+                // 即使初始化失敗也觸發ready事件，讓系統繼續運行
                 window.dispatchEvent(new CustomEvent('firebaseReady'));
             }
         }

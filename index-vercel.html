@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BML預約系統</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { 
+            db, 
+            auth, 
+            ref, 
+            set, 
+            get, 
+            onValue, 
+            push, 
+            remove, 
+            signInAnonymously, 
+            onAuthStateChanged,
+            writeReservation,
+            readAllReservations,
+            listenToReservations,
+            writeInstruments,
+            readInstruments,
+            listenToInstruments
+        } from './firebase.js';
+        
+        function initFirebase() {
+            console.log('🚀 開始初始化Firebase...');
+            
+            try {
+                // 將Firebase功能設為全域變數
+                window.firebase = {
+                    database: db,
+                    auth,
+                    ref,
+                    set,
+                    get,
+                    onValue,
+                    push,
+                    remove,
+                    signInAnonymously,
+                    onAuthStateChanged,
+                    writeReservation,
+                    readAllReservations,
+                    listenToReservations,
+                    writeInstruments,
+                    readInstruments,
+                    listenToInstruments
+                };
+                
+                console.log('✅ Firebase初始化成功');
+                console.log('📊 Firebase功能已載入:', Object.keys(window.firebase));
+                
+                // 立即觸發ready事件，讓系統開始運行
+                setTimeout(() => {
+                    console.log('✅ 觸發firebaseReady事件');
+                    window.dispatchEvent(new CustomEvent('firebaseReady'));
+                }, 1000);
+                
+            } catch (error) {
+                console.error('❌ Firebase初始化失敗:', error);
+                // 即使失敗也觸發ready事件
+                setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('firebaseReady'));
+                }, 1000);
+            }
+        }
+        
+        // 頁面載入時初始化Firebase
+        initFirebase();
+    </script>
+</head>
+<body>
+    <div class="container">
+        <!-- 標題列 -->
+        <header class="header">
+            <h1>BML預約系統</h1>
+            <div class="author-info">designed by 世和</div>
+            <div id="connectionStatus" class="connection-status connecting">
+                <span>連線中...</span>
+            </div>
+        </header>
+
+        <!-- 主要內容區域 -->
+        <div class="main-content">
+            <!-- 左側：儀器列表 -->
+            <div class="instruments-panel">
+                <div class="panel-header">
+                    <h2>儀器列表</h2>
+                    <button id="addInstrumentBtn" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> 新增儀器
+                    </button>
+                </div>
+                <div id="instrumentsList" class="instruments-list">
+                    <!-- 儀器項目將在這裡動態生成 -->
+                </div>
+            </div>
+
+            <!-- 右側：預約排程 -->
+            <div class="schedule-panel">
+                <div class="panel-header">
+                    <h2>預約排程</h2>
+                    <div class="schedule-controls">
+                        <button id="viewHistoryBtn" class="btn btn-secondary">
+                            <i class="fas fa-history"></i> 查看歷史
+                        </button>
+                    </div>
+                </div>
+                <div class="schedule-content">
+                    <div class="week-schedule">
+                        <h3 class="week-title">本週</h3>
+                        <div id="scheduleTable" class="schedule-table">
+                            <!-- 排程表格將在這裡動態生成 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增儀器模態框 -->
+    <div id="addInstrumentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>新增儀器</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="instrumentName">儀器名稱：</label>
+                    <input type="text" id="instrumentName" required>
+                </div>
+                <div class="form-group">
+                    <label for="instrumentDescription">儀器描述：</label>
+                    <textarea id="instrumentDescription" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="instrumentLocation">地址：</label>
+                    <input type="text" id="instrumentLocation" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="deleteInstrument" class="btn btn-danger" style="display: none;">刪除儀器</button>
+                <button id="cancelAddInstrument" class="btn btn-secondary">取消</button>
+                <button id="saveInstrument" class="btn btn-primary">儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 預約模態框 -->
+    <div id="bookingModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>編輯預約</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="bookingInstrument">儀器：</label>
+                    <select id="bookingInstrument" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="bookingContactName">預約人：</label>
+                    <input type="text" id="bookingContactName" required>
+                </div>
+                <div class="form-group">
+                    <label for="bookingDate">日期：</label>
+                    <input type="date" id="bookingDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="bookingTime">時段：</label>
+                    <select id="bookingTime" required>
+                        <option value="上午">上午</option>
+                        <option value="下午">下午</option>
+                        <option value="晚上">晚上</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="bookingPurpose">用途：</label>
+                    <textarea id="bookingPurpose" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="deleteBooking" class="btn btn-danger" style="display: none;">刪除預約</button>
+                <button id="cancelBooking" class="btn btn-secondary">取消</button>
+                <button id="saveBooking" class="btn btn-primary">儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 歷史記錄模態框 -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>預約歷史記錄</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="historyFilter">篩選：</label>
+                    <select id="historyFilter">
+                        <option value="all">所有儀器</option>
+                    </select>
+                    <button id="filterHistory" class="btn btn-primary">篩選</button>
+                </div>
+                <div id="historyList" class="history-list">
+                    <!-- 歷史記錄將在這裡動態生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 訊息提示 -->
+    <div id="messageContainer" class="message-container"></div>
+
+    <!-- 載入主程式 -->
+    <script src="script.js"></script>
+</body>
+</html>
