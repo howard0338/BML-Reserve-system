@@ -32,6 +32,15 @@
             try {
                 console.log('🚀 開始初始化Firebase...');
                 
+                // 測試資料庫連接
+                console.log('🔗 測試Realtime Database連接...');
+                const testRef = ref(db, 'test');
+                await set(testRef, { 
+                    message: 'Firebase Realtime Database 連接測試',
+                    timestamp: new Date().toISOString()
+                });
+                console.log('✅ Realtime Database連接成功');
+                
                 // 將Firebase功能設為全域變數
                 window.firebase = {
                     database: db,
@@ -54,6 +63,7 @@
                 
                 console.log('✅ Firebase初始化成功');
                 console.log('📊 Firebase功能已載入:', Object.keys(window.firebase));
+                console.log('🗄️ 資料庫實例:', db);
                 
                 // 設定認證狀態監聽
                 onAuthStateChanged(auth, (user) => {
@@ -74,6 +84,7 @@
                 
             } catch (error) {
                 console.error('❌ Firebase初始化失敗:', error);
+                console.error('錯誤詳情:', error);
                 window.dispatchEvent(new CustomEvent('firebaseReady'));
             }
         }
