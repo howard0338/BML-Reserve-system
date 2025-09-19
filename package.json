@@ -1,0 +1,42 @@
+{
+  "name": "instrument-booking-system",
+  "version": "1.0.0",
+  "description": "一個現代化的儀器預約管理系統，提供直觀的界面來管理實驗室儀器的預約排程",
+  "main": "index.html",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "echo 'No build process needed for static files'",
+    "deploy": "echo 'Ready for Vercel deployment'"
+  },
+  "keywords": [
+    "booking",
+    "schedule",
+    "instrument",
+    "laboratory",
+    "reservation",
+    "management",
+    "taiwan",
+    "chinese"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-username/instrument-booking-system.git"
+  },
+  "homepage": "https://your-username.github.io/instrument-booking-system",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/instrument-booking-system/issues"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "firebase": "^12.3.0"
+  }
+}

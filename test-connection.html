@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase連接測試</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .status { padding: 15px; margin: 10px 0; border-radius: 5px; font-weight: bold; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .warning { background: #fff3cd; color: #856404; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        #log { background: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 20px; font-family: monospace; white-space: pre-wrap; max-height: 500px; overflow-y: auto; }
+        .step { margin: 10px 0; padding: 10px; border-left: 4px solid #007bff; background: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Firebase連接診斷</h1>
+    
+    <div id="status" class="status info">準備中...</div>
+    
+    <div class="step">
+        <h3>步驟1: 測試Firebase SDK載入</h3>
+        <button onclick="testSDKLoading()">測試SDK載入</button>
+    </div>
+    
+    <div class="step">
+        <h3>步驟2: 測試Firebase初始化</h3>
+        <button onclick="testFirebaseInit()">測試初始化</button>
+    </div>
+    
+    <div class="step">
+        <h3>步驟3: 測試認證</h3>
+        <button onclick="testAuth()">測試認證</button>
+    </div>
+    
+    <div class="step">
+        <h3>步驟4: 測試資料庫</h3>
+        <button onclick="testDatabase()">測試資料庫</button>
+    </div>
+    
+    <button onclick="runAllTests()" style="background: #28a745; font-size: 16px; padding: 15px 30px;">🚀 執行完整測試</button>
+    <button onclick="clearLog()">清除日誌</button>
+    
+    <div id="log"></div>
+
+    <script type="module">
+        let firebaseApp = null;
+        let firebaseAuth = null;
+        let firebaseDatabase = null;
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+            logDiv.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+
+        async function testSDKLoading() {
+            try {
+                log('開始載入Firebase SDK...');
+                updateStatus('載入Firebase SDK...', 'info');
+
+                const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+                const { getAnalytics } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js');
+                const { getDatabase, ref, set, get } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
+                const { getAuth, signInAnonymously, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+
+                log('Firebase SDK載入成功', 'success');
+                updateStatus('SDK載入成功', 'success');
+
+                // 儲存模組供後續使用
+                window.firebaseModules = {
+                    initializeApp,
+                    getAnalytics,
+                    getDatabase,
+                    ref,
+                    set,
+                    get,
+                    getAuth,
+                    signInAnonymously,
+                    onAuthStateChanged
+                };
+
+                return true;
+            } catch (error) {
+                log(`SDK載入失敗: ${error.message}`, 'error');
+                updateStatus('SDK載入失敗', 'error');
+                return false;
+            }
+        }
+
+        async function testFirebaseInit() {
+            try {
+                if (!window.firebaseModules) {
+                    log('請先執行SDK載入測試', 'warning');
+                    return false;
+                }
+
+                log('開始初始化Firebase...');
+                updateStatus('初始化Firebase...', 'info');
+
+                const { initializeApp, getAnalytics, getDatabase, getAuth } = window.firebaseModules;
+
+                const firebaseConfig = {
+                    apiKey: "AIzaSyBdztuV26T9LDcr4zdesm367jAzCJkYiLE",
+                    authDomain: "reserve-system-52f1f.firebaseapp.com",
+                    databaseURL: "https://reserve-system-52f1f-default-rtdb.asia-southeast1.firebasedatabase.app",
+                    projectId: "reserve-system-52f1f",
+                    storageBucket: "reserve-system-52f1f.appspot.com",
+                    messagingSenderId: "859902265661",
+                    appId: "1:859902265661:web:6073a1538f55a792e6dd54",
+                    measurementId: "G-Y90GLL60F8"
+                };
+
+                firebaseApp = initializeApp(firebaseConfig);
+                const analytics = getAnalytics(firebaseApp);
+                firebaseDatabase = getDatabase(firebaseApp);
+                firebaseAuth = getAuth(firebaseApp);
+
+                log('Firebase初始化成功', 'success');
+                log(`App ID: ${firebaseApp.options.appId}`, 'info');
+                log(`Project ID: ${firebaseApp.options.projectId}`, 'info');
+                updateStatus('Firebase初始化成功', 'success');
+
+                return true;
+            } catch (error) {
+                log(`Firebase初始化失敗: ${error.message}`, 'error');
+                log(`錯誤詳情: ${error.stack}`, 'error');
+                updateStatus('Firebase初始化失敗', 'error');
+                return false;
+            }
+        }
+
+        async function testAuth() {
+            try {
+                if (!firebaseAuth) {
+                    log('請先執行Firebase初始化測試', 'warning');
+                    return false;
+                }
+
+                log('開始測試匿名認證...');
+                updateStatus('測試認證...', 'info');
+
+                const { signInAnonymously } = window.firebaseModules;
+                const userCredential = await signInAnonymously(firebaseAuth);
+                
+                log(`匿名認證成功！`, 'success');
+                log(`用戶ID: ${userCredential.user.uid}`, 'info');
+                log(`是否匿名: ${userCredential.user.isAnonymous}`, 'info');
+                updateStatus('認證成功', 'success');
+
+                return true;
+            } catch (error) {
+                log(`認證失敗: ${error.message}`, 'error');
+                log(`錯誤代碼: ${error.code}`, 'error');
+                updateStatus('認證失敗', 'error');
+                return false;
+            }
+        }
+
+        async function testDatabase() {
+            try {
+                if (!firebaseDatabase) {
+                    log('請先執行Firebase初始化測試', 'warning');
+                    return false;
+                }
+
+                log('開始測試資料庫連接...');
+                updateStatus('測試資料庫...', 'info');
+
+                const { ref, set, get } = window.firebaseModules;
+                
+                // 測試寫入
+                const testRef = ref(firebaseDatabase, 'test/connection');
+                await set(testRef, {
+                    message: 'Hello Firebase!',
+                    timestamp: new Date().toISOString(),
+                    testId: Math.random().toString(36).substr(2, 9)
+                });
+                log('資料庫寫入成功', 'success');
+
+                // 測試讀取
+                const snapshot = await get(testRef);
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    log('資料庫讀取成功', 'success');
+                    log(`讀取資料: ${JSON.stringify(data, null, 2)}`, 'info');
+                    updateStatus('資料庫測試成功', 'success');
+                    return true;
+                } else {
+                    log('資料庫讀取失敗：沒有找到資料', 'error');
+                    updateStatus('資料庫讀取失敗', 'error');
+                    return false;
+                }
+            } catch (error) {
+                log(`資料庫測試失敗: ${error.message}`, 'error');
+                log(`錯誤代碼: ${error.code}`, 'error');
+                updateStatus('資料庫測試失敗', 'error');
+                return false;
+            }
+        }
+
+        async function runAllTests() {
+            log('🚀 開始執行完整測試...', 'info');
+            updateStatus('執行完整測試...', 'info');
+
+            const results = {
+                sdk: false,
+                init: false,
+                auth: false,
+                database: false
+            };
+
+            results.sdk = await testSDKLoading();
+            if (results.sdk) {
+                results.init = await testFirebaseInit();
+                if (results.init) {
+                    results.auth = await testAuth();
+                    if (results.auth) {
+                        results.database = await testDatabase();
+                    }
+                }
+            }
+
+            // 總結結果
+            log('\n📊 測試結果總結:', 'info');
+            log(`SDK載入: ${results.sdk ? '✅ 成功' : '❌ 失敗'}`, results.sdk ? 'success' : 'error');
+            log(`Firebase初始化: ${results.init ? '✅ 成功' : '❌ 失敗'}`, results.init ? 'success' : 'error');
+            log(`認證: ${results.auth ? '✅ 成功' : '❌ 失敗'}`, results.auth ? 'success' : 'error');
+            log(`資料庫: ${results.database ? '✅ 成功' : '❌ 失敗'}`, results.database ? 'success' : 'error');
+
+            if (results.sdk && results.init && results.auth && results.database) {
+                updateStatus('🎉 所有測試通過！Firebase完全正常', 'success');
+            } else {
+                updateStatus('⚠️ 部分測試失敗，請檢查錯誤訊息', 'warning');
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+
+        // 將函數設為全域，供按鈕使用
+        window.testSDKLoading = testSDKLoading;
+        window.testFirebaseInit = testFirebaseInit;
+        window.testAuth = testAuth;
+        window.testDatabase = testDatabase;
+        window.runAllTests = runAllTests;
+        window.clearLog = clearLog;
+
+        // 頁面載入時顯示狀態
+        updateStatus('準備就緒，點擊按鈕開始測試', 'info');
+    </script>
+</body>
+</html>
