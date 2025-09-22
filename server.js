@@ -17,6 +17,10 @@ app.get('/test', (req, res) => {
     res.sendFile(path.join(__dirname, 'test-firebase-realtime.html'));
 });
 
+app.get('/debug', (req, res) => {
+    res.sendFile(path.join(__dirname, 'debug-firebase.html'));
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 BML預約系統運行在 http://localhost:${PORT}`);
     console.log('');
